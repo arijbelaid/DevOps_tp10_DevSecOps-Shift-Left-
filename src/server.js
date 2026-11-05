@@ -17,10 +17,9 @@ db.serialize(() => {
 // [CORRIGÉ] Injection SQL : requête paramétrée
 app.get("/users", (req, res) => {
   const sql = "SELECT id, name FROM users WHERE name = ?";
-  db.all(sql, [req.query.name], (err, rows) => 
-    err ? res.status(500).send(err.message) : res.json(rows)
-  );
-});
+  db.all(sql, [req.query.name], (err, rows) =>
+  err ? res.status(500).send(err.message) : res.json(rows)
+);
 
 // [CORRIGÉ] Injection de commande : execFile avec validation
 app.get("/ping", (req, res) => {
