@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Maintenir les dépendances npm à jour
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  
+  # Maintenir les Actions GitHub à jour (sécurité de la CI)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
