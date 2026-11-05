@@ -1,42 +1,62 @@
-# TP10 partie 5 : workflow de sécurité à compléter.
-name: security
+name: "DevSecOps Pipeline"
 
 on:
-  pull_request:
   push:
-    branches: [main]
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
-# TODO : permissions minimales au niveau du workflow (contents: read)
-#        puis security-events: write uniquement pour les jobs qui publient du SARIF
+permissions:
+  contents: read
+  security-events: write
 
 jobs:
-  secrets:
+  secrets-scan:
     runs-on: ubuntu-latest
     steps:
-      # TODO : épingler chaque Action tierce par SHA de commit complet, avec la version en commentaire
-      #        ex. uses: actions/checkout@<sha40> # v7.0.0
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
-          fetch-depth: 0 # historique complet : Gitleaks analyse tous les commits
-      # TODO : lancer Gitleaks (image ghcr.io/gitleaks/gitleaks ou action gitleaks/gitleaks-action)
+          fetch-depth: 0
+      - name: Gitleaks Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  sast:
+  sast-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      # TODO : Semgrep (conteneur semgrep/semgrep) avec --config p/javascript --config p/owasp-top-ten
-      #        --error pour faire échouer le job, --sarif pour publier dans l'onglet Security
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - name: Semgrep Scan
+        uses: returntocorp/semgrep-action@713efdd0a443623f6c6a791b435cf4d2877393cf # v1
+        with:
+          config: >-
+            p/javascript
+            p/owasp-top-ten
 
-  dependencies:
+  sca-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      # TODO : npm ci puis npm audit --audit-level=high
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - name: Install dependencies
+        run: npm ci
+      - name: NPM Audit
+        run: npm audit --audit-level=high
 
-  image:
+  image-scan:
     runs-on: ubuntu-latest
-    needs: [secrets, sast, dependencies]
     steps:
-      - uses: actions/checkout@v7
-      # TODO : docker build puis Trivy image --severity CRITICAL --exit-code 1 --ignore-unfixed
-      # TODO : Trivy config sur le Dockerfile
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - name: Build Docker Image
+        run: docker build -t vuln-app:ci .
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'vuln-app:ci'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
