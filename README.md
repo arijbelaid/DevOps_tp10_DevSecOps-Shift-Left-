@@ -38,9 +38,6 @@ Le projet analyse une application volontairement vulnérable (`vuln-app`) et cor
 
 ---
 
-## 📸 Captures d'écran
-
-Toutes les captures sont disponibles dans le dossier [`captures/`](captures/).
 
 ### 🔑 Partie 1 : Secrets avec Gitleaks
 
